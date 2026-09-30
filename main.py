@@ -1,53 +1,74 @@
- import os
+import os
 import requests
+from bs4 import BeautifulSoup
 
-# Environment Variables se Tokens nikalna
-APIFY_TOKEN = os.environ.get("APIFY_TOKEN")
+# Discord Webhook URL
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 def send_discord_msg(message):
+    if not DISCORD_WEBHOOK_URL:
+        print("Discord Webhook URL missing!")
+        return
     payload = {"content": message}
     response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
     if response.status_code != 204:
         print(f"Error sending Discord message: {response.status_code}, {response.text}")
 
-def run_apify_maps_scraper():
-    # Correct Endpoint & Actor ID
-    actor_id = "compass~crawler-google-places"
-    run_url = f"https://api.apify.com/v2/actors/{actor_id}/run-sync-get-dataset-items?token={APIFY_TOKEN}"
-
-    payload = {
-        "searchStringsArray": ["Dental Clinic in Los Angeles"],
-        "maxCrawledPlacesPerSearch": 10,
-        "language": "en"
-    }
-
-    print("Scraping started via Apify...")
-    response = requests.post(run_url, json=payload)
-
-    if response.status_code != 201 and response.status_code != 200:
-        print("Apify Run Error:", response.text)
+def fetch_leads_osm(city="Los Angeles", amenity="dentist"):
+    # Overpass API Query
+    overpass_url = "http://overpass-api.de/api/interpreter"
+    query = f"""
+    [out:json];
+    area["name"="{city}"]->.searchArea;
+    node["amenity"="{amenity}"](area.searchArea);
+    out body 15;
+    """
+    
+    print("Fetching leads from OpenStreetMap...")
+    response = requests.post(overpass_url, data={'data': query})
+    
+    if response.status_code != 200:
+        print("API Error:", response.text)
         return
 
-    items = response.json()
+    data = response.json()
+    elements = data.get("elements", [])
     found_leads = []
 
-    for item in items:
-        name = item.get("title", "Unknown Name")
-        website = item.get("website", None)
-        phone = item.get("phone", "No Phone")
+    for item in elements:
+        tags = item.get("tags", {})
+        name = tags.get("name")
+        if not name:
+            continue
+            
+        website = tags.get("website") or tags.get("contact:website")
+        phone = tags.get("phone") or tags.get("contact:phone", "No Phone")
 
-        # 1. High Priority: Website bilkul nahi hai
+        # 1. High Priority: Website nahi hai
         if not website:
             found_leads.append(f"🔴 **NO WEBSITE**\n**Name:** {name}\n**Phone:** {phone}\n")
             continue
 
-        # 2. Medium Priority: Website hai
-        found_leads.append(f"🟡 **HAS WEBSITE (Check Chatbot)**\n**Name:** {name}\n**Phone:** {phone}\n**Site:** {website}\n")
+        # 2. Check Chatbot on Website
+        has_chatbot = False
+        try:
+            res = requests.get(website, timeout=5)
+            soup = BeautifulSoup(res.text, 'html.parser')
+            page_text = str(soup).lower()
+            if any(bot in page_text for bot in ['taidio', 'intercom', 'drift', 'chatbot', 'crisp', 'collect.chat']):
+                has_chatbot = True
+        except:
+            pass
 
-    # Discord par notification bhejna
-   
+        if not has_chatbot:
+            found_leads.append(f"🟡 **NO CHATBOT**\n**Name:** {name}\n**Phone:** {phone}\n**Site:** {website}\n")
+
+    # Result Discord par bhejna
+    if found_leads:
+        report = f"🎯 **NEW LEADS FOUND ({len(found_leads)})**\n\n" + "\n---\n".join(found_leads[:5])
+        send_discord_msg(report)
     else:
-        send_discord_msg("ℹ️️ Is run me koi lead nahi mili.")
+        send_discord_msg("ℹ️ Is run me koi lead nahi mili.")
+
 if __name__ == "__main__":
-    run_apify_maps_scraper()
+    fetch_leads_osm()
