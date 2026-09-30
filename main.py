@@ -1,4 +1,4 @@
-import os
+ import os
 import requests
 
 # Environment Variables se Tokens nikalna
@@ -12,9 +12,9 @@ def send_discord_msg(message):
         print(f"Error sending Discord message: {response.status_code}, {response.text}")
 
 def run_apify_maps_scraper():
-    # Correct Actor ID with slash
-    actor_id = "compass/google-maps-scraper"
-    run_url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={APIFY_TOKEN}"
+    # Correct Endpoint & Actor ID
+    actor_id = "compass~crawler-google-places"
+    run_url = f"https://api.apify.com/v2/actors/{actor_id}/run-sync-get-dataset-items?token={APIFY_TOKEN}"
 
     payload = {
         "searchStringsArray": ["Dental Clinic in Los Angeles"],
@@ -50,7 +50,6 @@ def run_apify_maps_scraper():
         report = f"🎯 **NEW LEADS FOUND VIA APIFY ({len(found_leads)})**\n\n" + "\n---\n".join(found_leads[:5])
         send_discord_msg(report)
     else:
-        send_discord_msg("ℹ️ Is run me koi lead nahi mili.")
-
+        send_discord_msg("ℹ️️ Is run me koi lead nahi mili.")
 if __name__ == "__main__":
     run_apify_maps_scraper()
