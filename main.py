@@ -46,9 +46,7 @@ def run_apify_maps_scraper():
         found_leads.append(f"🟡 **HAS WEBSITE (Check Chatbot)**\n**Name:** {name}\n**Phone:** {phone}\n**Site:** {website}\n")
 
     # Discord par notification bhejna
-    if found_leads:
-        report = f"🎯 **NEW LEADS FOUND VIA APIFY ({len(found_leads)})**\n\n" + "\n---\n".join(found_leads[:5])
-        send_discord_msg(report)
+   
     else:
         send_discord_msg("ℹ️️ Is run me koi lead nahi mili.")
 if __name__ == "__main__":
