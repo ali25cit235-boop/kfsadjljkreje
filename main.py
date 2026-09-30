@@ -12,7 +12,8 @@ def send_discord_msg(message):
         print(f"Error sending Discord message: {response.status_code}, {response.text}")
 
 def run_apify_maps_scraper():
-    actor_id = "compass~google-maps-scraper"
+    # Correct Actor ID with slash
+    actor_id = "compass/google-maps-scraper"
     run_url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={APIFY_TOKEN}"
 
     payload = {
