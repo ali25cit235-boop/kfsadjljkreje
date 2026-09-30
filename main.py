@@ -15,8 +15,12 @@ def send_discord_msg(message):
         print(f"Error sending Discord message: {response.status_code}, {response.text}")
 
 def fetch_leads_osm(city="Los Angeles", amenity="dentist"):
-    # Overpass API Query
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    # HTTPS URL aur Proper Headers (User-Agent fix)
+    overpass_url = "https://overpass-api.de/api/interpreter"
+    headers = {
+        "User-Agent": "LeadFinderAgent/1.0 (Contact: mybot@gmail.com)"
+    }
+    
     query = f"""
     [out:json];
     area["name"="{city}"]->.searchArea;
@@ -25,7 +29,7 @@ def fetch_leads_osm(city="Los Angeles", amenity="dentist"):
     """
     
     print("Fetching leads from OpenStreetMap...")
-    response = requests.post(overpass_url, data={'data': query})
+    response = requests.post(overpass_url, data={'data': query}, headers=headers)
     
     if response.status_code != 200:
         print("API Error:", response.text)
@@ -52,7 +56,7 @@ def fetch_leads_osm(city="Los Angeles", amenity="dentist"):
         # 2. Check Chatbot on Website
         has_chatbot = False
         try:
-            res = requests.get(website, timeout=5)
+            res = requests.get(website, timeout=5, headers=headers)
             soup = BeautifulSoup(res.text, 'html.parser')
             page_text = str(soup).lower()
             if any(bot in page_text for bot in ['taidio', 'intercom', 'drift', 'chatbot', 'crisp', 'collect.chat']):
